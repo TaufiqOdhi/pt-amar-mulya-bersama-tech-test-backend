@@ -6,8 +6,11 @@ CREATE TABLE IF NOT EXISTS tasks (
     status VARCHAR(50) NOT NULL CHECK (status IN ('pending', 'completed')),
     due_date DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_deleted_at ON tasks(deleted_at);
+

@@ -43,13 +43,13 @@ func (r *taskRepo) CreateTask(ctx context.Context, task *domain.Task) error {
 
 func (r *taskRepo) GetTaskByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Task, error) {
 	query := `
-		SELECT id, user_id, title, COALESCE(description, ''), status, TO_CHAR(due_date, 'YYYY-MM-DD'), created_at, updated_at
+		SELECT id, user_id, title, COALESCE(description, ''), status, TO_CHAR(due_date, 'YYYY-MM-DD'), created_at, updated_at, deleted_at
 		FROM tasks
-		WHERE id = $1 AND user_id = $2
+		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
 	`
 	task := &domain.Task{}
 	err := r.db.QueryRow(ctx, query, id, userID).Scan(
-		&task.ID, &task.UserID, &task.Title, &task.Description, &task.Status, &task.DueDate, &task.CreatedAt, &task.UpdatedAt,
+		&task.ID, &task.UserID, &task.Title, &task.Description, &task.Status, &task.DueDate, &task.CreatedAt, &task.UpdatedAt, &task.DeletedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -69,7 +69,7 @@ func (r *taskRepo) GetTasks(ctx context.Context, userID uuid.UUID, params domain
 	}
 	offset := (params.Page - 1) * params.Limit
 
-	baseQuery := "FROM tasks WHERE user_id = $1"
+	baseQuery := "FROM tasks WHERE user_id = $1 AND deleted_at IS NULL"
 	args := []interface{}{userID}
 	argID := 2
 
@@ -149,7 +149,7 @@ func (r *taskRepo) UpdateTask(ctx context.Context, task *domain.Task) error {
 	query := `
 		UPDATE tasks
 		SET title = $1, description = $2, status = $3, due_date = $4, updated_at = NOW()
-		WHERE id = $5 AND user_id = $6
+		WHERE id = $5 AND user_id = $6 AND deleted_at IS NULL
 		RETURNING updated_at
 	`
 	err := r.db.QueryRow(ctx, query,
@@ -167,8 +167,9 @@ func (r *taskRepo) UpdateTask(ctx context.Context, task *domain.Task) error {
 
 func (r *taskRepo) DeleteTask(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
 	query := `
-		DELETE FROM tasks
-		WHERE id = $1 AND user_id = $2
+		UPDATE tasks
+		SET deleted_at = NOW(), updated_at = NOW()
+		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
 	`
 	cmdTag, err := r.db.Exec(ctx, query, id, userID)
 	if err != nil {

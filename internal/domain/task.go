@@ -23,6 +23,7 @@ type Task struct {
 	DueDate     string     `json:"due_date"`
 	CreatedAt   time.Time  `json:"created_at,omitempty"`
 	UpdatedAt   time.Time  `json:"updated_at,omitempty"`
+	DeletedAt   *time.Time `json:"deleted_at,omitempty"`
 }
 
 type CreateTaskRequest struct {
