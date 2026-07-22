@@ -26,9 +26,12 @@ func NewAuthService(userRepo domain.UserRepository, jwtSecret string, jwtExpirat
 }
 
 func (s *authService) Register(ctx context.Context, req *domain.RegisterRequest) (*domain.UserResponse, error) {
-	existingUser, _ := s.userRepo.GetUserByEmail(ctx, req.Email)
-	if existingUser != nil {
+	existingUser, err := s.userRepo.GetUserByEmail(ctx, req.Email)
+	if err == nil && existingUser != nil {
 		return nil, errors.New("email is already registered")
+	}
+	if err != nil && err.Error() != "user not found" {
+		return nil, fmt.Errorf("failed to check existing user: %w", err)
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)

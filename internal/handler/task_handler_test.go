@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -204,5 +205,31 @@ func TestDeleteTask_Success(t *testing.T) {
 	router.ServeHTTP(resp, req)
 
 	assert.Equal(t, http.StatusOK, resp.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestUpdateTask_NotFound(t *testing.T) {
+	mockService := new(MockTaskService)
+	userID := uuid.New()
+	taskID := uuid.New()
+	router := setupTaskRouter(mockService, userID)
+
+	reqBody := domain.UpdateTaskRequest{
+		Title:       "Updated Title",
+		Description: "Updated Desc",
+		Status:      "completed",
+		DueDate:     "2026-08-01",
+	}
+
+	mockService.On("UpdateTask", mock.Anything, userID, taskID, &reqBody).Return(nil, errors.New("task not found"))
+
+	body, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest(http.MethodPut, "/tasks/"+taskID.String(), bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusNotFound, resp.Code)
 	mockService.AssertExpectations(t)
 }

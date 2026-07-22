@@ -93,7 +93,7 @@ func (r *taskRepo) GetTasks(ctx context.Context, userID uuid.UUID, params domain
 	// Goroutine 1: Fetch tasks list concurrently
 	g.Go(func() error {
 		selectQuery := fmt.Sprintf(`
-			SELECT id, title, COALESCE(description, ''), status, TO_CHAR(due_date, 'YYYY-MM-DD')
+			SELECT id, user_id, title, COALESCE(description, ''), status, TO_CHAR(due_date, 'YYYY-MM-DD'), created_at, updated_at
 			%s
 			ORDER BY created_at DESC
 			LIMIT $%d OFFSET $%d
@@ -111,7 +111,7 @@ func (r *taskRepo) GetTasks(ctx context.Context, userID uuid.UUID, params domain
 		var list []*domain.Task
 		for rows.Next() {
 			t := &domain.Task{}
-			if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Status, &t.DueDate); err != nil {
+			if err := rows.Scan(&t.ID, &t.UserID, &t.Title, &t.Description, &t.Status, &t.DueDate, &t.CreatedAt, &t.UpdatedAt); err != nil {
 				return fmt.Errorf("failed to scan task row: %w", err)
 			}
 			list = append(list, t)

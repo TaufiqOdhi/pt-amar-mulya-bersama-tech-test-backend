@@ -149,3 +149,29 @@ func TestLogin_Failure(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, resp.Code)
 	mockService.AssertExpectations(t)
 }
+
+func TestRegister_EmailAlreadyExists(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mockService := new(MockAuthService)
+	authHandler := handler.NewAuthHandler(mockService)
+
+	router := gin.Default()
+	router.POST("/auth/register", authHandler.Register)
+
+	reqBody := domain.RegisterRequest{
+		Email:    "existing@example.com",
+		Password: "password123",
+	}
+
+	mockService.On("Register", mock.Anything, &reqBody).Return(nil, errors.New("email is already registered"))
+
+	body, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusConflict, resp.Code)
+	mockService.AssertExpectations(t)
+}

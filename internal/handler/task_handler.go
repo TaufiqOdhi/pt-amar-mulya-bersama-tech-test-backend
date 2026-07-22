@@ -107,6 +107,10 @@ func (h *TaskHandler) UpdateTask(c *gin.Context) {
 
 	res, err := h.taskService.UpdateTask(c.Request.Context(), userID, taskID, &req)
 	if err != nil {
+		if err.Error() == "task not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
