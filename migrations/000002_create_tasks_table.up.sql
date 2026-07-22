@@ -13,4 +13,6 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_deleted_at ON tasks(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_tasks_user_deleted_created ON tasks(user_id, deleted_at, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON tasks(user_id, status);
 

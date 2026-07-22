@@ -36,6 +36,16 @@ func NewPostgresPool(ctx context.Context, dbURL string) (*pgxpool.Pool, error) {
 }
 
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool, migrationsDir string) error {
+	const migrationLockID int64 = 857493201
+	if _, err := pool.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockID); err != nil {
+		return fmt.Errorf("failed to acquire migration advisory lock: %w", err)
+	}
+	defer func() {
+		if _, err := pool.Exec(context.Background(), "SELECT pg_advisory_unlock($1)", migrationLockID); err != nil {
+			slog.Error("Failed to release migration advisory lock", "error", err)
+		}
+	}()
+
 	createTableSQL := `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version VARCHAR(255) PRIMARY KEY,

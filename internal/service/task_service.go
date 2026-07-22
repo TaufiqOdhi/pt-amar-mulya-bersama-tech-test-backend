@@ -30,7 +30,7 @@ func NewTaskService(taskRepo domain.TaskRepository, cacheRepo domain.CacheReposi
 
 func (s *taskService) CreateTask(ctx context.Context, userID uuid.UUID, req *domain.CreateTaskRequest) (*domain.TaskResponse, error) {
 	if _, err := time.Parse("2006-01-02", req.DueDate); err != nil {
-		return nil, fmt.Errorf("invalid due_date format, expected YYYY-MM-DD: %w", err)
+		return nil, fmt.Errorf("%w: %v", domain.ErrInvalidDateFormat, err)
 	}
 
 	task := &domain.Task{
@@ -130,7 +130,7 @@ func (s *taskService) GetTasks(ctx context.Context, userID uuid.UUID, params dom
 
 func (s *taskService) UpdateTask(ctx context.Context, userID uuid.UUID, id uuid.UUID, req *domain.UpdateTaskRequest) (*domain.TaskResponse, error) {
 	if _, err := time.Parse("2006-01-02", req.DueDate); err != nil {
-		return nil, fmt.Errorf("invalid due_date format, expected YYYY-MM-DD: %w", err)
+		return nil, fmt.Errorf("%w: %v", domain.ErrInvalidDateFormat, err)
 	}
 	task, err := s.taskRepo.GetTaskByID(ctx, id, userID)
 	if err != nil {

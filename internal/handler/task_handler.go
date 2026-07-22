@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"todo-backend/internal/domain"
@@ -33,6 +34,10 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 
 	res, err := h.taskService.CreateTask(c.Request.Context(), userID, &req)
 	if err != nil {
+		if errors.Is(err, domain.ErrInvalidDateFormat) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -78,7 +83,11 @@ func (h *TaskHandler) GetTaskByID(c *gin.Context) {
 
 	res, err := h.taskService.GetTaskByID(c.Request.Context(), userID, taskID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == "task not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -107,11 +116,15 @@ func (h *TaskHandler) UpdateTask(c *gin.Context) {
 
 	res, err := h.taskService.UpdateTask(c.Request.Context(), userID, taskID, &req)
 	if err != nil {
-		if err.Error() == "task not found" {
+		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == "task not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if errors.Is(err, domain.ErrInvalidDateFormat) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -134,7 +147,11 @@ func (h *TaskHandler) DeleteTask(c *gin.Context) {
 
 	res, err := h.taskService.DeleteTask(c.Request.Context(), userID, taskID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == "task not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"todo-backend/internal/domain"
 
@@ -19,6 +20,15 @@ type taskRepo struct {
 
 func NewTaskRepo(db *pgxpool.Pool) domain.TaskRepository {
 	return &taskRepo{db: db}
+}
+
+func escapeILIKE(s string) string {
+	r := strings.NewReplacer(
+		"\\", "\\\\",
+		"%", "\\%",
+		"_", "\\_",
+	)
+	return r.Replace(s)
 }
 
 func (r *taskRepo) CreateTask(ctx context.Context, task *domain.Task) error {
@@ -43,7 +53,7 @@ func (r *taskRepo) CreateTask(ctx context.Context, task *domain.Task) error {
 
 func (r *taskRepo) GetTaskByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*domain.Task, error) {
 	query := `
-		SELECT id, user_id, title, COALESCE(description, ''), status, TO_CHAR(due_date, 'YYYY-MM-DD'), created_at, updated_at, deleted_at
+		SELECT id, user_id, title, COALESCE(description, ''), status, COALESCE(TO_CHAR(due_date, 'YYYY-MM-DD'), ''), created_at, updated_at, deleted_at
 		FROM tasks
 		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
 	`
@@ -53,7 +63,7 @@ func (r *taskRepo) GetTaskByID(ctx context.Context, id uuid.UUID, userID uuid.UU
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errors.New("task not found")
+			return nil, domain.ErrTaskNotFound
 		}
 		return nil, fmt.Errorf("failed to get task by id: %w", err)
 	}
@@ -80,8 +90,9 @@ func (r *taskRepo) GetTasks(ctx context.Context, userID uuid.UUID, params domain
 	}
 
 	if params.Search != "" {
+		escapedSearch := escapeILIKE(params.Search)
 		baseQuery += fmt.Sprintf(" AND (title ILIKE $%d OR description ILIKE $%d)", argID, argID)
-		args = append(args, "%"+params.Search+"%")
+		args = append(args, "%"+escapedSearch+"%")
 		argID++
 	}
 
@@ -93,7 +104,7 @@ func (r *taskRepo) GetTasks(ctx context.Context, userID uuid.UUID, params domain
 	// Goroutine 1: Fetch tasks list concurrently
 	g.Go(func() error {
 		selectQuery := fmt.Sprintf(`
-			SELECT id, user_id, title, COALESCE(description, ''), status, TO_CHAR(due_date, 'YYYY-MM-DD'), created_at, updated_at
+			SELECT id, user_id, title, COALESCE(description, ''), status, COALESCE(TO_CHAR(due_date, 'YYYY-MM-DD'), ''), created_at, updated_at
 			%s
 			ORDER BY created_at DESC
 			LIMIT $%d OFFSET $%d
@@ -158,7 +169,7 @@ func (r *taskRepo) UpdateTask(ctx context.Context, task *domain.Task) error {
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return errors.New("task not found")
+			return domain.ErrTaskNotFound
 		}
 		return fmt.Errorf("failed to update task: %w", err)
 	}
@@ -176,7 +187,7 @@ func (r *taskRepo) DeleteTask(ctx context.Context, id uuid.UUID, userID uuid.UUI
 		return fmt.Errorf("failed to delete task: %w", err)
 	}
 	if cmdTag.RowsAffected() == 0 {
-		return errors.New("task not found")
+		return domain.ErrTaskNotFound
 	}
 	return nil
 }

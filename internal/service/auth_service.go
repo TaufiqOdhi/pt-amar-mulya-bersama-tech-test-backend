@@ -28,9 +28,9 @@ func NewAuthService(userRepo domain.UserRepository, jwtSecret string, jwtExpirat
 func (s *authService) Register(ctx context.Context, req *domain.RegisterRequest) (*domain.UserResponse, error) {
 	existingUser, err := s.userRepo.GetUserByEmail(ctx, req.Email)
 	if err == nil && existingUser != nil {
-		return nil, errors.New("email is already registered")
+		return nil, domain.ErrEmailAlreadyRegistered
 	}
-	if err != nil && err.Error() != "user not found" {
+	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
 		return nil, fmt.Errorf("failed to check existing user: %w", err)
 	}
 
@@ -57,11 +57,11 @@ func (s *authService) Register(ctx context.Context, req *domain.RegisterRequest)
 func (s *authService) Login(ctx context.Context, req *domain.LoginRequest) (*domain.LoginResponse, error) {
 	user, err := s.userRepo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		return nil, errors.New("invalid email or password")
+		return nil, domain.ErrInvalidEmailOrPassword
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return nil, errors.New("invalid email or password")
+		return nil, domain.ErrInvalidEmailOrPassword
 	}
 
 	token, err := jwt.GenerateToken(user.ID, user.Email, s.jwtSecret, s.jwtExpirationHours)
