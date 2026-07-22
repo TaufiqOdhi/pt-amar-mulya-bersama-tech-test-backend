@@ -95,7 +95,9 @@ graph TD
 │   ├── logger/                  # slog logger configuration
 │   └── redis/                   # Redis client setup
 ├── migrations/                  # DDL SQL migration scripts
-├── docs/                        # Technical architecture specifications
+├── docs/                        # Technical architecture & Postman collection
+│   ├── technical_specification.md
+│   └── postman_collection.json  # Postman API Collection (v2.1.0)
 ├── Dockerfile                   # Multi-stage Docker build configuration
 ├── docker-compose.yml           # Multi-container orchestration (App, Postgres, Redis)
 ├── .env.example                 # Example environment variables
@@ -317,6 +319,29 @@ Returns the status of the server.
   "message": "Task deleted successfully"
 }
 ```
+
+---
+
+## 📮 Postman Collection
+
+A pre-configured **Postman Collection (v2.1.0)** is included in the [`docs/`](docs/) directory for instant API testing:
+- [`docs/postman_collection.json`](docs/postman_collection.json)
+
+### How to Import into Postman:
+
+1. Open your **Postman** desktop or web app.
+2. Click **Import** (top left corner).
+3. Select or drag-and-drop the [`docs/postman_collection.json`](docs/postman_collection.json) file.
+4. Once imported, the collection provides ready-to-run requests organized by folders:
+   - **Health Check**: `GET /health`
+   - **Authentication**: `POST /auth/register`, `POST /auth/login`
+   - **Tasks Management**: `POST /tasks`, `GET /tasks`, `GET /tasks/:id`, `PUT /tasks/:id`, `DELETE /tasks/:id`
+
+> [!TIP]
+> **Automated Token & Variable Workflow**:
+> - Running **Login User** (`POST /auth/login`) automatically extracts the JWT token from the response and saves it as `{{jwt_token}}` in the collection variables.
+> - Running **Create Task** (`POST /tasks`) automatically saves the generated task ID into `{{task_id}}`.
+> - All protected endpoints are pre-configured to pass `Authorization: Bearer {{jwt_token}}`.
 
 ---
 
