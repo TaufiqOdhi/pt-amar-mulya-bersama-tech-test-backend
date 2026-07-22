@@ -31,8 +31,8 @@ func main() {
 	slog.Info("Starting To-Do List Backend API...", "env", cfg.AppEnv, "port", cfg.Port)
 
 	dbCtx, dbCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer dbCancel()
 	dbPool, err := database.NewPostgresPool(dbCtx, cfg.DatabaseURL)
-	dbCancel()
 	if err != nil {
 		slog.Error("Database connection failed", "error", err)
 		os.Exit(1)

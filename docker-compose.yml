@@ -5,8 +5,8 @@ services:
     command: go run cmd/api/main.go
     volumes:
       - .:/app
-      - /home/maoik/.local/bin/agy:/usr/local/bin/agy:ro
       - .gemini:/root/.gemini
+      - ${HOME}/.local/bin/agy:/usr/local/bin/agy:ro  
     ports:
       - "8080:8080"
     environment:

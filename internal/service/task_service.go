@@ -33,6 +33,10 @@ func (s *taskService) CreateTask(ctx context.Context, userID uuid.UUID, req *dom
 		return nil, fmt.Errorf("%w: %v", domain.ErrInvalidDateFormat, err)
 	}
 
+	// Invalidate cache before and after mutation to prevent stale cache race conditions
+	s.invalidateUserCache(ctx, userID)
+	defer s.invalidateUserCache(ctx, userID)
+
 	task := &domain.Task{
 		UserID:      userID,
 		Title:       req.Title,
@@ -44,9 +48,6 @@ func (s *taskService) CreateTask(ctx context.Context, userID uuid.UUID, req *dom
 	if err := s.taskRepo.CreateTask(ctx, task); err != nil {
 		return nil, err
 	}
-
-	// Invalidate user's tasks cache
-	s.invalidateUserCache(ctx, userID)
 
 	return &domain.TaskResponse{
 		Message: "Task created successfully",
@@ -89,7 +90,7 @@ func (s *taskService) GetTasks(ctx context.Context, userID uuid.UUID, params dom
 		params.Limit = 100
 	}
 
-	cacheKey := fmt.Sprintf("user:%s:tasks:p%d:l%d:s%s:q%s",
+	cacheKey := fmt.Sprintf("user:%s:tasks?page=%d&limit=%d&status=%s&search=%s",
 		userID.String(), params.Page, params.Limit, params.Status, params.Search)
 
 	// Try reading from Redis cache
@@ -132,22 +133,23 @@ func (s *taskService) UpdateTask(ctx context.Context, userID uuid.UUID, id uuid.
 	if _, err := time.Parse("2006-01-02", req.DueDate); err != nil {
 		return nil, fmt.Errorf("%w: %v", domain.ErrInvalidDateFormat, err)
 	}
-	task, err := s.taskRepo.GetTaskByID(ctx, id, userID)
-	if err != nil {
-		return nil, err
-	}
 
-	task.Title = req.Title
-	task.Description = req.Description
-	task.Status = domain.TaskStatus(req.Status)
-	task.DueDate = req.DueDate
+	// Invalidate cache before and after mutation to prevent stale cache race conditions
+	s.invalidateUserCache(ctx, userID)
+	defer s.invalidateUserCache(ctx, userID)
+
+	task := &domain.Task{
+		ID:          id,
+		UserID:      userID,
+		Title:       req.Title,
+		Description: req.Description,
+		Status:      domain.TaskStatus(req.Status),
+		DueDate:     req.DueDate,
+	}
 
 	if err := s.taskRepo.UpdateTask(ctx, task); err != nil {
 		return nil, err
 	}
-
-	// Invalidate cache
-	s.invalidateUserCache(ctx, userID)
 
 	return &domain.TaskResponse{
 		Message: "Task updated successfully",
@@ -156,12 +158,13 @@ func (s *taskService) UpdateTask(ctx context.Context, userID uuid.UUID, id uuid.
 }
 
 func (s *taskService) DeleteTask(ctx context.Context, userID uuid.UUID, id uuid.UUID) (*domain.DeleteTaskResponse, error) {
+	// Invalidate cache before and after mutation to prevent stale cache race conditions
+	s.invalidateUserCache(ctx, userID)
+	defer s.invalidateUserCache(ctx, userID)
+
 	if err := s.taskRepo.DeleteTask(ctx, id, userID); err != nil {
 		return nil, err
 	}
-
-	// Invalidate cache
-	s.invalidateUserCache(ctx, userID)
 
 	return &domain.DeleteTaskResponse{
 		Message: "Task deleted successfully",

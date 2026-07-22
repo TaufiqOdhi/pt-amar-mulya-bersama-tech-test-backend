@@ -161,11 +161,11 @@ func (r *taskRepo) UpdateTask(ctx context.Context, task *domain.Task) error {
 		UPDATE tasks
 		SET title = $1, description = $2, status = $3, due_date = $4, updated_at = NOW()
 		WHERE id = $5 AND user_id = $6 AND deleted_at IS NULL
-		RETURNING updated_at
+		RETURNING created_at, updated_at
 	`
 	err := r.db.QueryRow(ctx, query,
 		task.Title, task.Description, task.Status, task.DueDate, task.ID, task.UserID,
-	).Scan(&task.UpdatedAt)
+	).Scan(&task.CreatedAt, &task.UpdatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

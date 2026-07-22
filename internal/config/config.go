@@ -22,7 +22,7 @@ func LoadConfig() *Config {
 		log.Println("No .env file found, reading environment variables from OS")
 	}
 
-	return &Config{
+	cfg := &Config{
 		Port:               getEnv("PORT", "8080"),
 		AppEnv:             getEnv("APP_ENV", "development"),
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/todo_db?sslmode=disable"),
@@ -30,6 +30,12 @@ func LoadConfig() *Config {
 		JWTSecret:          getEnv("JWT_SECRET", "super-secret-jwt-key-change-in-production"),
 		JWTExpirationHours: getEnvAsInt("JWT_EXPIRATION_HOURS", 24),
 	}
+
+	if cfg.AppEnv == "production" && cfg.JWTSecret == "super-secret-jwt-key-change-in-production" {
+		log.Fatal("FATAL: JWT_SECRET must be set to a secure secret key in production mode")
+	}
+
+	return cfg
 }
 
 func getEnv(key, fallback string) string {

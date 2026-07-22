@@ -27,7 +27,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	res, err := h.authService.Register(c.Request.Context(), &req)
 	if err != nil {
-		if errors.Is(err, domain.ErrEmailAlreadyRegistered) || err.Error() == domain.ErrEmailAlreadyRegistered.Error() {
+		if errors.Is(err, domain.ErrEmailAlreadyRegistered) {
 			c.JSON(http.StatusConflict, gin.H{"error": domain.ErrEmailAlreadyRegistered.Error()})
 			return
 		}
@@ -51,7 +51,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	res, err := h.authService.Login(c.Request.Context(), &req)
 	if err != nil {
-		if errors.Is(err, domain.ErrInvalidEmailOrPassword) || err.Error() == domain.ErrInvalidEmailOrPassword.Error() {
+		if errors.Is(err, domain.ErrInvalidEmailOrPassword) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": domain.ErrInvalidEmailOrPassword.Error()})
 			return
 		}

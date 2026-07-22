@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -221,7 +220,7 @@ func TestUpdateTask_NotFound(t *testing.T) {
 		DueDate:     "2026-08-01",
 	}
 
-	mockService.On("UpdateTask", mock.Anything, userID, taskID, &reqBody).Return(nil, errors.New("task not found"))
+	mockService.On("UpdateTask", mock.Anything, userID, taskID, &reqBody).Return(nil, domain.ErrTaskNotFound)
 
 	body, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest(http.MethodPut, "/tasks/"+taskID.String(), bytes.NewBuffer(body))

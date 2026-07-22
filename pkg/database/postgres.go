@@ -47,7 +47,9 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool, migrationsDir string
 		return fmt.Errorf("failed to acquire migration advisory lock: %w", err)
 	}
 	defer func() {
-		if _, err := conn.Exec(context.Background(), "SELECT pg_advisory_unlock($1)", migrationLockID); err != nil {
+		unlockCtx, unlockCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer unlockCancel()
+		if _, err := conn.Exec(unlockCtx, "SELECT pg_advisory_unlock($1)", migrationLockID); err != nil {
 			slog.Error("Failed to release migration advisory lock", "error", err)
 		}
 	}()

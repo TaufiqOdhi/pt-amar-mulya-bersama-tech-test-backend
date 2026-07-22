@@ -86,7 +86,7 @@ func (h *TaskHandler) GetTaskByID(c *gin.Context) {
 
 	res, err := h.taskService.GetTaskByID(c.Request.Context(), userID, taskID)
 	if err != nil {
-		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == domain.ErrTaskNotFound.Error() {
+		if errors.Is(err, domain.ErrTaskNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": domain.ErrTaskNotFound.Error()})
 			return
 		}
@@ -120,7 +120,7 @@ func (h *TaskHandler) UpdateTask(c *gin.Context) {
 
 	res, err := h.taskService.UpdateTask(c.Request.Context(), userID, taskID, &req)
 	if err != nil {
-		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == domain.ErrTaskNotFound.Error() {
+		if errors.Is(err, domain.ErrTaskNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": domain.ErrTaskNotFound.Error()})
 			return
 		}
@@ -152,7 +152,7 @@ func (h *TaskHandler) DeleteTask(c *gin.Context) {
 
 	res, err := h.taskService.DeleteTask(c.Request.Context(), userID, taskID)
 	if err != nil {
-		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == domain.ErrTaskNotFound.Error() {
+		if errors.Is(err, domain.ErrTaskNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": domain.ErrTaskNotFound.Error()})
 			return
 		}

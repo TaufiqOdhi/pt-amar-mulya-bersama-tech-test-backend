@@ -51,8 +51,12 @@ func (r *cacheRepo) Set(ctx context.Context, key string, value interface{}, expi
 	// Track key in user-specific key set for fast O(1) invalidation
 	if userIDStr := extractUserIDFromKey(key); userIDStr != "" {
 		setKey := fmt.Sprintf("user_keys:%s", userIDStr)
-		_ = r.client.SAdd(ctx, setKey, key).Err()
-		_ = r.client.Expire(ctx, setKey, expiration*2).Err()
+		pipe := r.client.Pipeline()
+		pipe.SAdd(ctx, setKey, key)
+		pipe.Expire(ctx, setKey, expiration*2)
+		if _, err := pipe.Exec(ctx); err != nil {
+			slog.Error("Failed to track key in user key set", "key", setKey, "userID", userIDStr, "error", err)
+		}
 	}
 
 	return nil
@@ -75,9 +79,14 @@ func (r *cacheRepo) DeletePattern(ctx context.Context, pattern string) error {
 		setKey := fmt.Sprintf("user_keys:%s", userIDStr)
 		keys, err := r.client.SMembers(ctx, setKey).Result()
 		if err == nil && len(keys) > 0 {
-			keysToDelete := append(keys, setKey)
+			keysToDelete := make([]string, 0, len(keys)+1)
+			keysToDelete = append(keysToDelete, keys...)
+			keysToDelete = append(keysToDelete, setKey)
 			slog.Debug("Invalidating user cache via key set", "count", len(keys), "userID", userIDStr)
-			return r.client.Del(ctx, keysToDelete...).Err()
+			if err := r.client.Del(ctx, keysToDelete...).Err(); err == nil {
+				return nil
+			}
+			slog.Error("Failed to delete keys via key set, falling back to SCAN", "userID", userIDStr)
 		}
 	}
 

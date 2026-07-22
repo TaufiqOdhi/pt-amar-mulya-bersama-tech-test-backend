@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -137,7 +136,7 @@ func TestLogin_Failure(t *testing.T) {
 		Password: "wrongpassword",
 	}
 
-	mockService.On("Login", mock.Anything, &reqBody).Return(nil, errors.New("invalid email or password"))
+	mockService.On("Login", mock.Anything, &reqBody).Return(nil, domain.ErrInvalidEmailOrPassword)
 
 	body, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(body))
@@ -163,7 +162,7 @@ func TestRegister_EmailAlreadyExists(t *testing.T) {
 		Password: "password123",
 	}
 
-	mockService.On("Register", mock.Anything, &reqBody).Return(nil, errors.New("email is already registered"))
+	mockService.On("Register", mock.Anything, &reqBody).Return(nil, domain.ErrEmailAlreadyRegistered)
 
 	body, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
