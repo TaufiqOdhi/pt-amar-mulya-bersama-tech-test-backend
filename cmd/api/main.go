@@ -22,7 +22,6 @@ import (
 	pkgRedis "todo-backend/pkg/redis"
 
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -31,11 +30,9 @@ func main() {
 
 	slog.Info("Starting To-Do List Backend API...", "env", cfg.AppEnv, "port", cfg.Port)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Connect PostgreSQL
-	dbPool, err := database.NewPostgresPool(ctx, cfg.DatabaseURL)
+	dbCtx, dbCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	dbPool, err := database.NewPostgresPool(dbCtx, cfg.DatabaseURL)
+	dbCancel()
 	if err != nil {
 		slog.Error("Database connection failed", "error", err)
 		os.Exit(1)
@@ -43,14 +40,18 @@ func main() {
 	defer dbPool.Close()
 
 	// Run Database Migrations
-	if err := database.RunMigrations(ctx, dbPool, "migrations"); err != nil {
+	migrationCtx, migrationCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	err = database.RunMigrations(migrationCtx, dbPool, "migrations")
+	migrationCancel()
+	if err != nil {
 		slog.Error("Migration failure", "error", err)
 		os.Exit(1)
 	}
 
 	// Connect Redis (Optional graceful fallback)
-	var redisClient *redis.Client
-	redisClient, err = pkgRedis.NewRedisClient(ctx, cfg.RedisURL)
+	redisCtx, redisCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	redisClient, err := pkgRedis.NewRedisClient(redisCtx, cfg.RedisURL)
+	redisCancel()
 	if err != nil {
 		slog.Warn("Redis connection failed, continuing without caching", "error", err)
 	} else {
@@ -88,10 +89,10 @@ func main() {
 		origin := c.Request.Header.Get("Origin")
 		if origin != "" {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		} else {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		}
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
 

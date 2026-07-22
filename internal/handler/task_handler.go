@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"todo-backend/internal/domain"
@@ -35,10 +36,11 @@ func (h *TaskHandler) CreateTask(c *gin.Context) {
 	res, err := h.taskService.CreateTask(c.Request.Context(), userID, &req)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidDateFormat) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrInvalidDateFormat.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("Failed to create task", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -60,7 +62,8 @@ func (h *TaskHandler) GetTasks(c *gin.Context) {
 
 	res, err := h.taskService.GetTasks(c.Request.Context(), userID, params)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("Failed to fetch tasks", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -83,11 +86,12 @@ func (h *TaskHandler) GetTaskByID(c *gin.Context) {
 
 	res, err := h.taskService.GetTaskByID(c.Request.Context(), userID, taskID)
 	if err != nil {
-		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == "task not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == domain.ErrTaskNotFound.Error() {
+			c.JSON(http.StatusNotFound, gin.H{"error": domain.ErrTaskNotFound.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("Failed to fetch task by ID", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -116,15 +120,16 @@ func (h *TaskHandler) UpdateTask(c *gin.Context) {
 
 	res, err := h.taskService.UpdateTask(c.Request.Context(), userID, taskID, &req)
 	if err != nil {
-		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == "task not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == domain.ErrTaskNotFound.Error() {
+			c.JSON(http.StatusNotFound, gin.H{"error": domain.ErrTaskNotFound.Error()})
 			return
 		}
 		if errors.Is(err, domain.ErrInvalidDateFormat) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrInvalidDateFormat.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("Failed to update task", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -147,11 +152,12 @@ func (h *TaskHandler) DeleteTask(c *gin.Context) {
 
 	res, err := h.taskService.DeleteTask(c.Request.Context(), userID, taskID)
 	if err != nil {
-		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == "task not found" {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		if errors.Is(err, domain.ErrTaskNotFound) || err.Error() == domain.ErrTaskNotFound.Error() {
+			c.JSON(http.StatusNotFound, gin.H{"error": domain.ErrTaskNotFound.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("Failed to delete task", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 

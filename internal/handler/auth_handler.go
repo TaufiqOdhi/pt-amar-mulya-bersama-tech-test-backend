@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"todo-backend/internal/domain"
@@ -26,11 +27,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	res, err := h.authService.Register(c.Request.Context(), &req)
 	if err != nil {
-		if errors.Is(err, domain.ErrEmailAlreadyRegistered) || err.Error() == "email is already registered" {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		if errors.Is(err, domain.ErrEmailAlreadyRegistered) || err.Error() == domain.ErrEmailAlreadyRegistered.Error() {
+			c.JSON(http.StatusConflict, gin.H{"error": domain.ErrEmailAlreadyRegistered.Error()})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("Failed to register user", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -49,7 +51,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	res, err := h.authService.Login(c.Request.Context(), &req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		if errors.Is(err, domain.ErrInvalidEmailOrPassword) || err.Error() == domain.ErrInvalidEmailOrPassword.Error() {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": domain.ErrInvalidEmailOrPassword.Error()})
+			return
+		}
+		slog.Error("Failed to login user", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 

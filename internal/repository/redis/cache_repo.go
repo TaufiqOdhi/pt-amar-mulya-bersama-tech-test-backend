@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"todo-backend/internal/domain"
@@ -48,8 +49,7 @@ func (r *cacheRepo) Set(ctx context.Context, key string, value interface{}, expi
 	}
 
 	// Track key in user-specific key set for fast O(1) invalidation
-	var userIDStr string
-	if _, err := fmt.Sscanf(key, "user:%s:", &userIDStr); err == nil && userIDStr != "" {
+	if userIDStr := extractUserIDFromKey(key); userIDStr != "" {
 		setKey := fmt.Sprintf("user_keys:%s", userIDStr)
 		_ = r.client.SAdd(ctx, setKey, key).Err()
 		_ = r.client.Expire(ctx, setKey, expiration*2).Err()
@@ -58,13 +58,20 @@ func (r *cacheRepo) Set(ctx context.Context, key string, value interface{}, expi
 	return nil
 }
 
+func extractUserIDFromKey(key string) string {
+	parts := strings.Split(key, ":")
+	if len(parts) >= 2 && parts[0] == "user" && parts[1] != "" {
+		return parts[1]
+	}
+	return ""
+}
+
 func (r *cacheRepo) DeletePattern(ctx context.Context, pattern string) error {
 	if r.client == nil {
 		return nil
 	}
 
-	var userIDStr string
-	if _, err := fmt.Sscanf(pattern, "user:%s:*", &userIDStr); err == nil && userIDStr != "" {
+	if userIDStr := extractUserIDFromKey(pattern); userIDStr != "" {
 		setKey := fmt.Sprintf("user_keys:%s", userIDStr)
 		keys, err := r.client.SMembers(ctx, setKey).Result()
 		if err == nil && len(keys) > 0 {

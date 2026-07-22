@@ -36,12 +36,18 @@ func NewPostgresPool(ctx context.Context, dbURL string) (*pgxpool.Pool, error) {
 }
 
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool, migrationsDir string) error {
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to acquire connection for migrations: %w", err)
+	}
+	defer conn.Release()
+
 	const migrationLockID int64 = 857493201
-	if _, err := pool.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockID); err != nil {
+	if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", migrationLockID); err != nil {
 		return fmt.Errorf("failed to acquire migration advisory lock: %w", err)
 	}
 	defer func() {
-		if _, err := pool.Exec(context.Background(), "SELECT pg_advisory_unlock($1)", migrationLockID); err != nil {
+		if _, err := conn.Exec(context.Background(), "SELECT pg_advisory_unlock($1)", migrationLockID); err != nil {
 			slog.Error("Failed to release migration advisory lock", "error", err)
 		}
 	}()
@@ -52,7 +58,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool, migrationsDir string
 			applied_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		);
 	`
-	if _, err := pool.Exec(ctx, createTableSQL); err != nil {
+	if _, err := conn.Exec(ctx, createTableSQL); err != nil {
 		return fmt.Errorf("failed to create schema_migrations table: %w", err)
 	}
 
@@ -71,7 +77,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool, migrationsDir string
 
 	for _, fileName := range upFiles {
 		var exists bool
-		err := pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version = $1)", fileName).Scan(&exists)
+		err := conn.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version = $1)", fileName).Scan(&exists)
 		if err != nil {
 			return fmt.Errorf("failed to check migration status for %s: %w", fileName, err)
 		}
@@ -88,7 +94,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool, migrationsDir string
 			return fmt.Errorf("failed to read migration file %s: %w", filePath, err)
 		}
 
-		tx, err := pool.Begin(ctx)
+		tx, err := conn.Begin(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to start migration transaction for %s: %w", fileName, err)
 		}

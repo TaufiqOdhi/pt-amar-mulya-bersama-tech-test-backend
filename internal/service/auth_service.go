@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"todo-backend/internal/domain"
 	"todo-backend/pkg/jwt"
@@ -26,7 +27,8 @@ func NewAuthService(userRepo domain.UserRepository, jwtSecret string, jwtExpirat
 }
 
 func (s *authService) Register(ctx context.Context, req *domain.RegisterRequest) (*domain.UserResponse, error) {
-	existingUser, err := s.userRepo.GetUserByEmail(ctx, req.Email)
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	existingUser, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err == nil && existingUser != nil {
 		return nil, domain.ErrEmailAlreadyRegistered
 	}
@@ -40,7 +42,7 @@ func (s *authService) Register(ctx context.Context, req *domain.RegisterRequest)
 	}
 
 	user := &domain.User{
-		Email:        req.Email,
+		Email:        email,
 		PasswordHash: string(hashedPassword),
 	}
 
@@ -55,7 +57,8 @@ func (s *authService) Register(ctx context.Context, req *domain.RegisterRequest)
 }
 
 func (s *authService) Login(ctx context.Context, req *domain.LoginRequest) (*domain.LoginResponse, error) {
-	user, err := s.userRepo.GetUserByEmail(ctx, req.Email)
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	user, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, domain.ErrInvalidEmailOrPassword
 	}

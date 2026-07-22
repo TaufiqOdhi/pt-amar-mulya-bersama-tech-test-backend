@@ -41,7 +41,7 @@ type UpdateTaskRequest struct {
 }
 
 type TaskQueryParams struct {
-	Status string `form:"status"`
+	Status string `form:"status" binding:"omitempty,oneof=pending completed"`
 	Page   int    `form:"page"`
 	Limit  int    `form:"limit"`
 	Search string `form:"search"`
