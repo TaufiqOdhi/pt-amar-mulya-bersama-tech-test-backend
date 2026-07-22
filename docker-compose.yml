@@ -1,0 +1,52 @@
+services:
+  backend:
+    build: .
+    container_name: todo-backend-dev
+    command: go run cmd/api/main.go
+    volumes:
+      - .:/app
+      - /home/maoik/.local/bin/agy:/usr/local/bin/agy:ro
+      - .gemini:/root/.gemini
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ENV=development
+      - PORT=8080
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/todo_db?sslmode=disable
+      - JWT_SECRET=super-secret-jwt-key-change-in-production
+      - JWT_EXPIRATION_HOURS=24
+    depends_on:
+      - db
+      - redis
+    networks:
+      - code-test-net
+
+  db:
+    image: postgres:15-alpine
+    container_name: todo-backend-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: todo_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - code-test-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: todo-backend-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - code-test-net
+
+volumes:
+  postgres_data:
+
+networks:
+  code-test-net:
+    external: true
