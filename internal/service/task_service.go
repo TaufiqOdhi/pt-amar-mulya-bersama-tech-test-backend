@@ -100,9 +100,9 @@ func (s *taskService) GetTasks(ctx context.Context, userID uuid.UUID, params dom
 		return nil, err
 	}
 
-	totalPages := int(math.Ceil(float64(totalCount) / float64(params.Limit)))
-	if totalPages == 0 {
-		totalPages = 1
+	totalPages := 0
+	if totalCount > 0 {
+		totalPages = int(math.Ceil(float64(totalCount) / float64(params.Limit)))
 	}
 
 	response := &domain.GetTasksResponse{
@@ -163,8 +163,13 @@ func (s *taskService) invalidateUserCache(ctx context.Context, userID uuid.UUID)
 	if s.cacheRepo == nil {
 		return
 	}
+	// Use background context with a 5s timeout to ensure cache invalidation completes
+	// even if the HTTP request context was cancelled.
+	bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	pattern := fmt.Sprintf("user:%s:*", userID.String())
-	if err := s.cacheRepo.DeletePattern(ctx, pattern); err != nil {
+	if err := s.cacheRepo.DeletePattern(bgCtx, pattern); err != nil {
 		slog.Error("Failed to invalidate user cache pattern", "pattern", pattern, "error", err)
 	}
 }
