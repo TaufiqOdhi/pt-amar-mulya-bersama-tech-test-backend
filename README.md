@@ -1,5 +1,11 @@
 # Go To-Do List Backend API
 
+[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![Gin Framework](https://img.shields.io/badge/Gin-v1.9-008080?logo=go&logoColor=white)](https://gin-gonic.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 A high-performance, production-grade RESTful API for managing tasks (To-Do List), built with **Go**, **Gin Web Framework**, **PostgreSQL**, and **Redis**.
 
 ---
@@ -37,33 +43,34 @@ The project follows a **Layered Clean Architecture** pattern with clear separati
 
 ```mermaid
 graph TD
-    Client[Client / Postman / App] -->|HTTP Requests| GinRouter[Gin Router / CORS]
+    Client["Client / Postman / App"] -->|HTTP Requests| GinRouter["Gin Router / CORS"]
     
-    subgraph Middleware Layer
-        GinRouter --> Logger[slog JSON Logger]
-        GinRouter --> AuthMiddleware[JWT Auth Middleware]
+    subgraph Middleware["Middleware Layer"]
+        GinRouter --> Logger["slog JSON Logger"]
+        GinRouter --> AuthMiddleware["JWT Auth Middleware"]
     end
     
-    subgraph Handler Layer
-        AuthMiddleware --> TaskHandler[Task Handler]
-        AuthMiddleware --> AuthHandler[Auth Handler]
+    subgraph Handlers["Handler Layer"]
+        AuthMiddleware --> TaskHandler["Task Handler"]
+        AuthMiddleware --> AuthHandler["Auth Handler"]
     end
     
-    subgraph Service Layer
-        TaskHandler --> TaskService[Task Service]
-        AuthHandler --> AuthService[Auth Service]
+    subgraph Services["Service Layer"]
+        TaskHandler --> TaskService["Task Service"]
+        AuthHandler --> AuthService["Auth Service"]
     end
     
-    subgraph Repository Layer
-        TaskService -->|errgroup Concurrent Queries| TaskRepo[Task Repository]
-        TaskService -->|Cache & Invalidation| CacheRepo[Redis Cache Repo]
-        AuthService --> UserRepo[User Repository]
+    subgraph Repositories["Repository Layer"]
+        TaskService -->|errgroup Concurrent Queries| TaskRepo["Task Repository"]
+        TaskService -->|Cache & Invalidation| CacheRepo["Redis Cache Repo"]
+        AuthService --> UserRepo["User Repository"]
     end
     
-    subgraph Storage Layer
-        TaskRepo -->|pgx/v5 Connection Pool| Postgres[(PostgreSQL 15)]
+    subgraph Storage["Storage Layer"]
+        TaskRepo -->|pgx/v5 Connection Pool| Postgres[("PostgreSQL 15")]
         UserRepo -->|pgx/v5 Connection Pool| Postgres
-        CacheRepo -->|go-redis| Redis[(Redis 7)]
+        CacheRepo -->|go-redis| Redis[("Redis 7")]
+    end
 ```
 
 ### Directory Layout
@@ -325,8 +332,8 @@ Returns the status of the server.
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
-   cd <repository-directory>
+   git clone https://github.com/TaufiqOdhi/pt-amar-mulya-bersama-tech-test-backend.git
+   cd pt-amar-mulya-bersama-tech-test-backend
    ```
 
 2. **Start all services** (Backend API, PostgreSQL 15, Redis 7):
@@ -381,10 +388,16 @@ go tool cover -func=coverage.out
 ## 💡 Key Design Highlights
 
 1. **Concurrent Database Querying**:
-   In [`internal/repository/postgres/task_repo.go`](file:///app/internal/repository/postgres/task_repo.go), the `GetTasks` function uses `golang.org/x/sync/errgroup` to execute the data query (paginated records) and total count query in parallel across distinct goroutines, cutting execution latency in half.
+   In [`internal/repository/postgres/task_repo.go`](internal/repository/postgres/task_repo.go), the `GetTasks` function uses `golang.org/x/sync/errgroup` to execute the data query (paginated records) and total count query in parallel across distinct goroutines, cutting execution latency in half.
 
 2. **Smart Redis Invalidation**:
-   In [`internal/service/task_service.go`](file:///app/internal/service/task_service.go), cache keys are user-scoped (`user:<user_id>:...`). Any write/mutation operation (`CreateTask`, `UpdateTask`, `DeleteTask`) automatically purges matching cache keys (`user:<user_id>:*`) to guarantee data consistency.
+   In [`internal/service/task_service.go`](internal/service/task_service.go), cache keys are user-scoped (`user:<user_id>:...`). Any write/mutation operation (`CreateTask`, `UpdateTask`, `DeleteTask`) automatically purges matching cache keys (`user:<user_id>:*`) to guarantee data consistency.
 
 3. **Graceful Fallback**:
    If Redis becomes unavailable, the application logs a warning and gracefully continues operations directly with PostgreSQL without crashing.
+
+---
+
+## 📄 Technical Context
+
+This project was developed according to technical test specifications for a **Go To-Do List Backend API** (PT Amar Mulya Bersama). For detailed documentation on system design decisions, Lark specification extraction, database schema design, and API architecture, refer to [`docs/technical_specification.md`](docs/technical_specification.md).
