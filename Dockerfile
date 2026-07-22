@@ -1,5 +1,13 @@
 FROM golang:1.22-bookworm
 
+# Install development & text editor tools
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    bash \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy dependency manifests
