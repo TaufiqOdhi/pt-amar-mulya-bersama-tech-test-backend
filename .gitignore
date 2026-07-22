@@ -1,0 +1,38 @@
+# Binaries & Compiled Output
+/server
+/app/server
+/main
+/bin/
+*.exe
+*.exe?
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Environment & Credentials
+.env
+.env.local
+*.env
+!.env.example
+
+# Antigravity CLI & Gemini configuration directory (User specified)
+.gemini/
+/.gemini
+
+# Logs & Temporary Files
+*.log
+/tmp/
+/scratch/
+
+# Database Data Volumes
+postgres_data/
+redis_data/
+
+# IDE & Editor Files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
